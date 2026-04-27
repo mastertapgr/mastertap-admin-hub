@@ -4,9 +4,10 @@ const getBotToken = () => {
   return token;
 };
 
-export async function sendMessage(chatId, text, replyMarkup = null) {
+export async function sendMessage(chatId, text, replyMarkup = null, customToken = null) {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${getBotToken()}/sendMessage`, {
+    const token = customToken || getBotToken();
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -23,9 +24,10 @@ export async function sendMessage(chatId, text, replyMarkup = null) {
   }
 }
 
-export async function editMessage(chatId, messageId, text, replyMarkup = null) {
+export async function editMessage(chatId, messageId, text, replyMarkup = null, customToken = null) {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${getBotToken()}/editMessageText`, {
+    const token = customToken || getBotToken();
+    const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,9 +45,10 @@ export async function editMessage(chatId, messageId, text, replyMarkup = null) {
   }
 }
 
-export async function answerCallbackQuery(callbackQueryId, text) {
+export async function answerCallbackQuery(callbackQueryId, text, customToken = null) {
   try {
-    await fetch(`https://api.telegram.org/bot${getBotToken()}/answerCallbackQuery`, {
+    const token = customToken || getBotToken();
+    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
