@@ -122,6 +122,7 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
       try {
         // Use client-specific Resend API key if available, fallback to global
         const clientResendKey = client.booking_config?.resend_api_key || client.resend_api_key || process.env.RESEND_API_KEY;
+        console.log("DEBUG: Resend Key Prefix:", clientResendKey ? clientResendKey.substring(0, 10) : "MISSING");
         const resend = new Resend(clientResendKey);
         
         const lang = appointment.lang || 'el';
@@ -171,6 +172,7 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
 
     // 3. Update Telegram Message (Using correct bot token)
     const clientToken = client.telegram_token || client.booking_config?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
+    console.log("DEBUG: Telegram Token Prefix:", clientToken ? clientToken.substring(0, 10) : "MISSING");
     const nLang = client.notification_language || client.booking_config?.notification_language || 'el';
     const labels = {
       el: { confirmed: "ΕΠΙΒΕΒΑΙΩΘΗΚΕ", cancelled: "ΑΚΥΡΩΘΗΚΕ", success: "Επιτυχία", at: "στις" },
@@ -182,7 +184,8 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
     const statusText = newStatus === 'confirmed' ? L_tg.confirmed : L_tg.cancelled;
     const cleanText = originalText.split('\n\nΠαρακαλώ')[0].split('\n\nБудь λαска')[0].split('\n\nPlease')[0].trim();
 
-    await editMessage(chatId, messageId, `${newStatus === 'confirmed' ? '✅' : '❌'} <b>${statusText}</b> ${L_tg.at} ${timestamp}\n\n${cleanText}`, null, clientToken);
+    const editRes = await editMessage(chatId, messageId, `${newStatus === 'confirmed' ? '✅' : '❌'} <b>${statusText}</b> ${L_tg.at} ${timestamp}\n\n${cleanText}`, null, clientToken);
+    console.log("DEBUG: Telegram Edit Result:", JSON.stringify(editRes));
     await answerCallbackQuery(callbackId, `${L_tg.success}: ${statusText}`, clientToken);
 
   } catch (error) {
