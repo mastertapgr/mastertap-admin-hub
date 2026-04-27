@@ -1,8 +1,12 @@
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const getBotToken = () => {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is missing!");
+  return token;
+};
 
 export async function sendMessage(chatId, text, replyMarkup = null) {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${getBotToken()}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -21,7 +25,7 @@ export async function sendMessage(chatId, text, replyMarkup = null) {
 
 export async function editMessage(chatId, messageId, text, replyMarkup = null) {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+    const res = await fetch(`https://api.telegram.org/bot${getBotToken()}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -41,7 +45,7 @@ export async function editMessage(chatId, messageId, text, replyMarkup = null) {
 
 export async function answerCallbackQuery(callbackQueryId, text) {
   try {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+    await fetch(`https://api.telegram.org/bot${getBotToken()}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
