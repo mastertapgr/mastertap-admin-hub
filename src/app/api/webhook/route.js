@@ -45,7 +45,7 @@ async function handleStartCommand(chatId, clientId) {
     // Find client in Supabase
     const { data: client, error } = await supabase
       .from('clients')
-      .select('name, booking_config')
+      .select('name, booking_config, notification_language')
       .eq('client_id', clientId)
       .single();
 
@@ -61,10 +61,10 @@ async function handleStartCommand(chatId, clientId) {
 
     if (updateError) throw updateError;
 
-    const lang = client.booking_config?.notification_language || 'el';
+    const lang = client.notification_language || client.booking_config?.notification_language || 'el';
     const welcomeMessages = {
       el: `✅ <b>Σύνδεση Επιτυχής!</b>\n\nΚαλώς ήρθατε <b>${client.name}</b>. Από εδώ και πέρα θα λαμβάνετε όλες τις ειδοποιήσεις για τα ραντεβού σας σε αυτό το chat.`,
-      uk: `✅ <b>Підключення успішне!</b>\n\nЛаскаво просимо <b>${client.name}</b>. Відтепер ви отримуватимете всі сповіщення про записи в цьому чаті.`,
+      uk: `✅ <b>Підключення успішне!</b>\n\nЛаскаво просимо <b>${client.name}</b>. Відτεπερ ви отримуватиμεте всі сповіщення про записи в цьому чаті.`,
       en: `✅ <b>Connection Successful!</b>\n\nWelcome <b>${client.name}</b>. From now on, you will receive all appointment notifications in this chat.`
     };
 
@@ -79,18 +79,19 @@ async function handleStartCommand(chatId, clientId) {
 
 async function handleAppointmentAction(chatId, messageId, callbackId, action, appointmentId, originalText) {
   try {
-    // Fetch appointment and client
+    // Fetch appointment
     const { data: appointment } = await supabase.from('appointments').select('*').eq('id', appointmentId).single();
     if (!appointment) return await answerCallbackQuery(callbackId, "Error: Appointment not found.");
 
+    // Fetch client using client_id from appointment
     const { data: client } = await supabase.from('clients').select('*').eq('client_id', appointment.client_id).single();
     if (!client) return await answerCallbackQuery(callbackId, "Error: Client not found.");
 
-    const nLang = client.booking_config?.notification_language || 'el';
+    const nLang = client.notification_language || client.booking_config?.notification_language || 'el';
     const labels = {
       el: { confirmed: "ΕΠΙΒΕΒΑΙΩΘΗΚΕ", cancelled: "ΑΚΥΡΩΘΗΚΕ", success: "Επιτυχία", at: "στις" },
       en: { confirmed: "CONFIRMED", cancelled: "CANCELLED", success: "Success", at: "at" },
-      uk: { confirmed: "ПІДТВЕРДЖЕНО", cancelled: "СКАСОВАНО", success: "Успіх", at: "о" }
+      uk: { confirmed: "ПІДТВЕРДЖЕНО", cancelled: "СΚАСОВАНО", success: "Успіх", at: "ο" }
     };
     const L = labels[nLang] || labels.el;
 
@@ -104,7 +105,6 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
     const timestamp = new Date().toLocaleString(nLang === 'uk' ? 'uk-UA' : (nLang === 'en' ? 'en-US' : 'el-GR'), { timeZone: 'Europe/Athens' });
     const statusText = newStatus === 'confirmed' ? L.confirmed : L.cancelled;
     
-    // Clean original text (remove the "Please confirm" part)
     const cleanText = originalText.split('\n\nΠαρακαλώ')[0].split('\n\nБудь ласка')[0].split('\n\nPlease')[0].trim();
     
     await editMessage(chatId, messageId, `${newStatus === 'confirmed' ? '✅' : '❌'} <b>${statusText}</b> ${L.at} ${timestamp}\n\n${cleanText}`);
