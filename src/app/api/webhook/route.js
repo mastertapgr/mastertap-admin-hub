@@ -16,9 +16,11 @@ export async function POST(request) {
         const parts = text.split(' ');
         if (parts.length > 1) {
           const clientId = parts[1];
-          return await handleStartCommand(chatId, clientId);
+          await handleStartCommand(chatId, clientId);
+          return NextResponse.json({ ok: true });
         } else {
-          return await sendMessage(chatId, "Welcome to MasterTap Bot! Please use the 'Connect' button from your Dashboard to link your account.");
+          await sendMessage(chatId, "Welcome to MasterTap Bot! Please use the 'Connect' button from your Dashboard to link your account.");
+          return NextResponse.json({ ok: true });
         }
       }
     }
@@ -30,7 +32,8 @@ export async function POST(request) {
       const messageId = message.message_id;
 
       const [action, appointmentId] = data.split('_');
-      return await handleAppointmentAction(chatId, messageId, callbackQueryId, action, appointmentId, message.text);
+      await handleAppointmentAction(chatId, messageId, callbackQueryId, action, appointmentId, message.text);
+      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ ok: true });
@@ -50,7 +53,8 @@ async function handleStartCommand(chatId, clientId) {
       .single();
 
     if (error || !client) {
-      return await sendMessage(chatId, `❌ Error: Client ID <b>${clientId}</b> not found.`);
+      await sendMessage(chatId, `❌ Error: Client ID <b>${clientId}</b> not found.`);
+      return;
     }
 
     // Update client's telegram_chat_id in Supabase
@@ -64,16 +68,15 @@ async function handleStartCommand(chatId, clientId) {
     const lang = client.notification_language || client.booking_config?.notification_language || 'el';
     const welcomeMessages = {
       el: `✅ <b>Σύνδεση Επιτυχής!</b>\n\nΚαλώς ήρθατε <b>${client.name}</b>. Από εδώ και πέρα θα λαμβάνετε όλες τις ειδοποιήσεις για τα ραντεβού σας σε αυτό το chat.`,
-      uk: `✅ <b>Підключення успішне!</b>\n\nЛаскаво просимо <b>${client.name}</b>. Відτεπερ ви отримуватиμεте всі сповіщення про записи в цьому чаті.`,
+      uk: `✅ <b>Підключення успішне!</b>\n\nЛаскаво просиμο <b>${client.name}</b>. Відτεπερ βи отримуватиμετε всі сповіщення про записи в цьому чаті.`,
       en: `✅ <b>Connection Successful!</b>\n\nWelcome <b>${client.name}</b>. From now on, you will receive all appointment notifications in this chat.`
     };
 
     await sendMessage(chatId, welcomeMessages[lang] || welcomeMessages.el);
-    return NextResponse.json({ ok: true });
 
   } catch (error) {
     console.error("❌ handleStartCommand error:", error);
-    return await sendMessage(chatId, "❌ An error occurred during setup. Please try again later.");
+    await sendMessage(chatId, "❌ An error occurred during setup. Please try again later.");
   }
 }
 
@@ -81,22 +84,29 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
   try {
     // Fetch appointment
     const { data: appointment } = await supabase.from('appointments').select('*').eq('id', appointmentId).single();
-    if (!appointment) return await answerCallbackQuery(callbackId, "Error: Appointment not found.");
+    if (!appointment) {
+      await answerCallbackQuery(callbackId, "Error: Appointment not found.");
+      return;
+    }
 
     // Fetch client using client_id from appointment
     const { data: client } = await supabase.from('clients').select('*').eq('client_id', appointment.client_id).single();
-    if (!client) return await answerCallbackQuery(callbackId, "Error: Client not found.");
+    if (!client) {
+      await answerCallbackQuery(callbackId, "Error: Client not found.");
+      return;
+    }
 
     const nLang = client.notification_language || client.booking_config?.notification_language || 'el';
     const labels = {
       el: { confirmed: "ΕΠΙΒΕΒΑΙΩΘΗΚΕ", cancelled: "ΑΚΥΡΩΘΗΚΕ", success: "Επιτυχία", at: "στις" },
       en: { confirmed: "CONFIRMED", cancelled: "CANCELLED", success: "Success", at: "at" },
-      uk: { confirmed: "ПІДТВЕРДЖЕНО", cancelled: "СΚАСОВАНО", success: "Успіх", at: "ο" }
+      uk: { confirmed: "ПІДТВЕРΔЖΕΝΟ", cancelled: "СΚΑΣΟΒΑΝΟ", success: "Уσпіχ", at: "о" }
     };
     const L = labels[nLang] || labels.el;
 
     if (appointment.status === 'confirmed' || appointment.status === 'cancelled') {
-      return await answerCallbackQuery(callbackId, "Already processed.");
+      await answerCallbackQuery(callbackId, "Already processed.");
+      return;
     }
 
     const newStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
@@ -105,14 +115,13 @@ async function handleAppointmentAction(chatId, messageId, callbackId, action, ap
     const timestamp = new Date().toLocaleString(nLang === 'uk' ? 'uk-UA' : (nLang === 'en' ? 'en-US' : 'el-GR'), { timeZone: 'Europe/Athens' });
     const statusText = newStatus === 'confirmed' ? L.confirmed : L.cancelled;
     
-    const cleanText = originalText.split('\n\nΠαρακαλώ')[0].split('\n\nБудь ласка')[0].split('\n\nPlease')[0].trim();
+    const cleanText = originalText.split('\n\nΠαρακαλώ')[0].split('\n\nБудь λαска')[0].split('\n\nPlease')[0].trim();
     
     await editMessage(chatId, messageId, `${newStatus === 'confirmed' ? '✅' : '❌'} <b>${statusText}</b> ${L.at} ${timestamp}\n\n${cleanText}`);
     await answerCallbackQuery(callbackId, `${L.success}: ${statusText}`);
     
-    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("❌ handleAppointmentAction error:", error);
-    return await answerCallbackQuery(callbackId, "System Error. Please check Dashboard.");
+    await answerCallbackQuery(callbackId, "System Error. Please check Dashboard.");
   }
 }
