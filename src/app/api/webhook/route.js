@@ -49,7 +49,7 @@ async function handleStartCommand(chatId, clientId) {
     // Find client in Supabase
     const { data: client, error } = await supabase
       .from('clients')
-      .select('name, booking_config, notification_language')
+      .select('name, booking_config')
       .eq('client_id', clientId)
       .single();
 
