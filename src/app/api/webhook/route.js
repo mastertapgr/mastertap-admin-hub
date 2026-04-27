@@ -54,14 +54,9 @@ async function handleStartCommand(chatId, clientId) {
     }
 
     // Update client's telegram_chat_id in Supabase
-    const updatedConfig = {
-      ...(client.booking_config || {}),
-      telegram_chat_id: String(chatId)
-    };
-
     const { error: updateError } = await supabase
       .from('clients')
-      .update({ booking_config: updatedConfig })
+      .update({ telegram_chat_id: String(chatId) })
       .eq('client_id', clientId);
 
     if (updateError) throw updateError;
